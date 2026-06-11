@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>丝绸词汇记忆 · SRS</title>
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f0eb;--card:#fff;--text:#2c2416;--muted:#8b7e6a;
+  --accent:#8b4513;--accent-light:#a0522d;--correct:#2d6a4f;--wrong:#c1121f;
+  --border:#d4c5b2;--shadow:0 2px 8px rgba(0,0,0,.06);--radius:12px;
+  --stage-0:#e9ecef;--stage-1:#ffd6a5;--stage-2:#fdffb6;--stage-3:#caffbf;
+  --stage-4:#9bf6ff;--stage-5:#a0c4ff;--stage-6:#bdb2ff;--stage-7:#ffc6ff;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;
+  display:flex;justify-content:center;padding:8px;
+}
+.app{
+  width:100%;max-width:560px;display:flex;flex-direction:column;min-height:100vh;
+}
+
+/* ===== Nav ===== */
+nav{
+  display:flex;background:var(--card);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px;position:sticky;top:8px;z-index:10;
+}
+nav button{
+  flex:1;padding:12px 6px;border:none;background:transparent;
+  font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;
+  transition:color .2s,background .2s;white-space:nowrap;
+}
+nav button.active{color:var(--accent);background:#f5f0eb;box-shadow:inset 0 -3px 0 var(--accent);}
+nav button:hover{color:var(--accent-light);}
+nav button .icon{display:block;font-size:18px;margin-bottom:2px;}
+
+/* ===== Views ===== */
+.view{display:none;flex:1;flex-direction:column;gap:12px}
+.view.active{display:flex}
+.card{
+  background:var(--card);border-radius:var(--radius);padding:20px;
+  box-shadow:var(--shadow);
+}
+
+/* ===== Learn View ===== */
+.word-display{text-align:center;padding:32px 20px}
+.word-display .word{font-size:36px;font-weight:700;color:var(--accent);letter-spacing:1px}
+.word-display .hint{font-size:13px;color:var(--muted);margin-top:8px}
+.progress-bar-wrap{background:var(--border);border-radius:20px;height:10px;overflow:hidden;margin:8px 0}
+.progress-bar-fill{background:var(--accent);height:100%;border-radius:20px;transition:width .3s}
+.progress-text{font-size:13px;color:var(--muted);text-align:center}
+.input-group{display:flex;gap:8px}
+.input-group input{
+  flex:1;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius);
+  font-size:16px;outline:none;transition:border-color .2s;
+}
+.input-group input:focus{border-color:var(--accent)}
+.btn{
+  padding:12px 20px;border:none;border-radius:var(--radius);font-size:15px;
+  font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-light)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg)}
+.btn-sm{padding:8px 14px;font-size:13px}
+.feedback{
+  text-align:center;padding:16px;border-radius:var(--radius);font-size:15px;display:none;
+}
+.feedback.show{display:block}
+.feedback.correct{background:#d8f3dc;color:var(--correct);border:1px solid #b7e4c7}
+.feedback.wrong{background:#f8d7da;color:var(--wrong);border:1px solid #f1c0c0}
+.feedback .answer{font-weight:700;margin-top:4px}
+.feedback .tease{margin-top:6px;font-style:italic;color:#e07b39;font-weight:600}
+.failed-table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+.failed-table th,.failed-table td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left}
+.failed-table th{background:#f8d7da;color:var(--wrong);font-weight:600}
+.completed-card{text-align:center;padding:40px 20px}
+.completed-card .icon{font-size:48px}
+.completed-card h2{margin:12px 0 4px}
+.completed-card p{color:var(--muted);margin-bottom:8px}
+
+/* ===== Library View ===== */
+.search-bar input{
+  width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:var(--radius);
+  font-size:15px;outline:none;
+}
+.search-bar input:focus{border-color:var(--accent)}
+.word-list{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto}
+.word-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:var(--card);border-radius:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}
+.word-item .wi-left{display:flex;align-items:center;gap:10px}
+.word-item .wi-word{font-weight:600;font-size:15px}
+.word-item .wi-meaning{font-size:13px;color:var(--muted)}
+.stage-dot{
+  width:10px;height:10px;border-radius:50%;flex-shrink:0;
+}
+.stage-dot.s0{background:var(--stage-0);border:1px solid #ccc}
+.stage-dot.s1{background:var(--stage-1)}
+.stage-dot.s2{background:var(--stage-2)}
+.stage-dot.s3{background:var(--stage-3)}
+.stage-dot.s4{background:var(--stage-4)}
+.stage-dot.s5{background:var(--stage-5)}
+.stage-dot.s6{background:var(--stage-6)}
+.stage-dot.s7{background:var(--stage-7)}
+.actions-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ===== Stats View ===== */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-box{
+  background:var(--card);border-radius:var(--radius);padding:16px;
+  text-align:center;box-shadow:var(--shadow);
+}
+.stat-box .num{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-box .label{font-size:12px;color:var(--muted);margin-top:2px}
+.stage-bars{display:flex;flex-direction:column;gap:6px}
+.stage-bar-row{display:flex;align-items:center;gap:8px;font-size:13px}
+.stage-bar-row .bar-label{width:80px;text-align:right;color:var(--muted)}
+.stage-bar-row .bar-track{flex:1;background:var(--border);border-radius:6px;height:10px;overflow:hidden}
+.stage-bar-row .bar-fill{height:100%;border-radius:6px;transition:width .3s}
+.stage-bar-row .bar-count{width:30px;text-align:right;font-weight:600}
+
+/* ===== Settings View ===== */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+.setting-row label{font-weight:600;font-size:15px}
+.setting-row input,.setting-row select{
+  width:180px;padding:10px 12px;border:2px solid var(--border);border-radius:8px;
+  font-size:14px;outline:none;
+}
+.setting-row input:focus,.setting-row select:focus{border-color:var(--accent)}
+.setting-desc{font-size:12px;color:var(--muted);margin-top:-8px;margin-bottom:8px}
+
+/* ===== Toast ===== */
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:#333;color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;
+  z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.toast.show{opacity:1}
+
+/* ===== Modal ===== */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;
+  display:none;align-items:center;justify-content:center;
+}
+.modal-overlay.show{display:flex}
+.modal-box{
+  background:var(--card);border-radius:var(--radius);padding:24px;
+  max-width:480px;width:90%;max-height:80vh;overflow-y:auto;
+  box-shadow:0 8px 32px rgba(0,0,0,.15);
+}
+.modal-box h3{margin-bottom:12px}
+.modal-box textarea{
+  width:100%;height:160px;padding:12px;border:2px solid var(--border);
+  border-radius:8px;font-size:14px;font-family:monospace;resize:vertical;outline:none;
+}
+.modal-box textarea:focus{border-color:var(--accent)}
+.modal-box .actions-row{margin-top:12px;justify-content:flex-end}
+
+@media(max-width:400px){
+  .word-display .word{font-size:28px}
+  .input-group{flex-direction:column}
+  .stats-grid{grid-template-columns:1fr}
+  nav button{font-size:11px;padding:10px 4px}
+  nav button .icon{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <nav>
+    <button class="active" data-view="learn"><span class="icon">📖</span>学习</button>
+    <button data-view="library"><span class="icon">📚</span>词库</button>
+    <button data-view="stats"><span class="icon">📊</span>统计</button>
+    <button data-view="settings"><span class="icon">⚙️</span>设置</button>
+  </nav>
+
+  <!-- ===== Learn View ===== -->
+  <div id="learn-view" class="view active">
+    <div id="learn-card" class="card" style="display:none">
+      <div class="word-display">
+        <div class="word" id="learn-word"></div>
+        <div class="hint" id="learn-hint"></div>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="progress-text" id="progress-text"></div>
+      <div class="input-group" style="margin-top:12px">
+        <input type="text" id="answer-input" placeholder="输入中文翻译…" autocomplete="off">
+        <button class="btn btn-primary" id="submit-btn">提交</button>
+        <button class="btn btn-ghost" id="skip-btn">跳过</button>
+      </div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+    <div id="completed-card" class="card completed-card" style="display:none">
+      <div class="icon">🎉</div>
+      <h2>今日学习完成！</h2>
+      <p id="completed-msg"></p>
+      <div id="failed-summary" style="display:none;margin:16px 0;text-align:left"></div>
+      <button class="btn btn-primary" id="extra-study-btn">再学一些</button>
+    </div>
+    <div id="empty-card" class="card completed-card">
+      <div class="icon">📭</div>
+      <h2>没有待复习的词汇</h2>
+      <p>去词库导入词汇，或检查设置中的每日配额</p>
+    </div>
+  </div>
+
+  <!-- ===== Library View ===== -->
+  <div id="library-view" class="view">
+    <div class="search-bar"><input type="text" id="lib-search" placeholder="搜索词汇…"></div>
+    <div class="actions-row">
+      <button class="btn btn-primary btn-sm" id="import-btn">📥 导入</button>
+      <button class="btn btn-ghost btn-sm" id="export-btn">📤 导出备份</button>
+      <span style="font-size:13px;color:var(--muted);margin-left:auto" id="lib-count"></span>
+    </div>
+    <div class="word-list" id="word-list"></div>
+  </div>
+
+  <!-- ===== Stats View ===== -->
+  <div id="stats-view" class="view">
+    <div class="stats-grid">
+      <div class="stat-box"><div class="num" id="stat-total">0</div><div class="label">总词汇</div></div>
+      <div class="stat-box"><div class="num" id="stat-mastered">0</div><div class="label">已掌握</div></div>
+      <div class="stat-box"><div class="num" id="stat-today">0</div><div class="label">今日已复习</div></div>
+      <div class="stat-box"><div class="num" id="stat-due">0</div><div class="label">待复习</div></div>
+    </div>
+    <div class="card"><h3 style="margin-bottom:12px">阶段分布</h3><div class="stage-bars" id="stage-bars"></div></div>
+  </div>
+
+  <!-- ===== Settings View ===== -->
+  <div id="settings-view" class="view">
+    <div class="card">
+      <h3 style="margin-bottom:8px">学习设置</h3>
+      <div class="setting-row">
+        <label>每日配额</label>
+        <input type="number" id="set-quota" min="5" max="100" value="20">
+      </div>
+      <div class="setting-desc">每天最多学习多少个词（含复习+新词）</div>
+      <div class="setting-row">
+        <label>判断模式</label>
+        <select id="set-mode">
+          <option value="local">本地模糊匹配</option>
+          <option value="ai">AI 语义判断</option>
+        </select>
+      </div>
+      <div class="setting-desc">AI 模式需要配置下方 API</div>
+    </div>
+    <div class="card" id="ai-config-card" style="display:none">
+      <h3 style="margin-bottom:8px">AI API 配置</h3>
+      <div class="setting-row">
+        <label>API 地址</label>
+        <input type="text" id="set-api-url" placeholder="https://api.deepseek.com/v1/chat/completions">
+      </div>
+      <div class="setting-row">
+        <label>API Key</label>
+        <input type="password" id="set-api-key" placeholder="sk-...">
+      </div>
+      <div class="setting-row">
+        <label>模型</label>
+        <input type="text" id="set-api-model" placeholder="deepseek-chat">
+      </div>
+      <button class="btn btn-ghost btn-sm" id="test-api-btn">🧪 测试连接</button>
+      <span id="test-api-result" style="font-size:13px;margin-left:8px"></span>
+    </div>
+    <div class="card">
+      <button class="btn btn-ghost" id="reset-btn" style="color:var(--wrong);border-color:var(--wrong)">⚠️ 重置所有数据</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal-box">
+    <h3>导入词汇</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:8px">
+      支持格式：每行 "单词 释义"（空格/逗号分隔），或 JSON 数组<br>
+      也可以选择 .txt / .json / .csv 文件
+    </p>
+    <textarea id="import-textarea" placeholder="fabric 织物；布料&#10;cocoon 茧&#10;..."></textarea>
+    <div class="actions-row">
+      <input type="file" id="import-file" accept=".txt,.json,.csv" style="display:none">
+      <button class="btn btn-ghost btn-sm" id="import-file-btn">📁 选择文件</button>
+      <button class="btn btn-primary btn-sm" id="import-confirm-btn">导入</button>
+      <button class="btn btn-ghost btn-sm" id="import-cancel-btn">取消</button>
+    </div>
+    <p id="import-msg" style="font-size:13px;color:var(--accent);margin-top:8px"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================================================================
+   Silk Vocab SRS — 丝绸主题词汇间隔重复记忆应用
+   ================================================================ */
+
+// ─── Preset Vocabulary ───────────────────────────────────────────
+const PRESET_WORDS = [
+  // 丝绸与原材料
+  {word:"fabric",meaning:"织物；布料"},
+  {word:"cocoon",meaning:"茧"},
+  {word:"mulberry silkworm",meaning:"桑蚕"},
+  {word:"larvae",meaning:"幼虫"},
+  {word:"fibre",meaning:"纤维"},
+  {word:"silk yarn",meaning:"丝线"},
+  {word:"raw silk",meaning:"生丝"},
+  // 生产与制作
+  {word:"unravel",meaning:"解开；散开"},
+  {word:"reel",meaning:"卷轴；纺车"},
+  {word:"draw the fibres",meaning:"抽出纤维"},
+  {word:"weave",meaning:"编织"},
+  {word:"cultivation",meaning:"培养；养殖"},
+  {word:"rear",meaning:"饲养（蚕）"},
+  {word:"devise",meaning:"设计；发明"},
+  {word:"smuggle",meaning:"走私"},
+  {word:"conceal",meaning:"隐藏"},
+  {word:"hollow",meaning:"中空的"},
+  // 历史与传说
+  {word:"legend",meaning:"传说"},
+  {word:"account",meaning:"记述；描述"},
+  {word:"royalty",meaning:"皇室成员"},
+  {word:"caste",meaning:"社会等级"},
+  {word:"dynasty",meaning:"朝代"},
+  {word:"noble",meaning:"贵族"},
+  {word:"imperial monopoly",meaning:"帝国垄断"},
+  {word:"conquest",meaning:"征服"},
+  // 社会与经济
+  {word:"status",meaning:"地位"},
+  {word:"unit of currency",meaning:"货币单位"},
+  {word:"diplomatic gifts",meaning:"外交礼物"},
+  {word:"commodity",meaning:"商品"},
+  {word:"lucrative",meaning:"利润丰厚的"},
+  {word:"middlemen",meaning:"中间商"},
+  {word:"sole producer",meaning:"唯一生产商"},
+  // 贸易与路线
+  {word:"trade route",meaning:"贸易路线"},
+  {word:"Silk Road",meaning:"丝绸之路"},
+  {word:"stretch",meaning:"延伸"},
+  {word:"Mediterranean Sea",meaning:"地中海"},
+  {word:"merchandise",meaning:"商品；货物"},
+  {word:"facilitate",meaning:"促进"},
+  // 质量与评价
+  {word:"prized",meaning:"受珍视的"},
+  {word:"esteemed reputation",meaning:"崇高的声誉"},
+  {word:"exotic",meaning:"异域的；奇异的"},
+  {word:"magnificent",meaning:"华丽的；壮观的"},
+  // 现代与衰退
+  {word:"downfall",meaning:"衰落；垮台"},
+  {word:"manmade fibres",meaning:"人造纤维"},
+  {word:"nylon",meaning:"尼龙"},
+  {word:"stifle",meaning:"扼杀；压制"},
+  {word:"restore",meaning:"恢复"},
+  {word:"recapture",meaning:"重新获得"},
+];
+
+// ─── SRS Interval Table ─────────────────────────────────────────
+const SRS_INTERVALS = [0, 1, 2, 4, 7, 15, 30]; // index 1..6
+
+// ─── Global State ───────────────────────────────────────────────
+let words = [];
+let dailyProgress = {};
+let settings = {
+  dailyQuota: 20,
+  judgeMode: 'local',  // 'local' | 'ai'
+  aiApiUrl: 'https://api.deepseek.com/v1/chat/completions',
+  aiApiKey: '',
+  aiModel: 'deepseek-chat',
+};
+let currentBatch = [];
+let batchIndex = 0;
+let retryQueue = [];      // words answered wrong today — re-test at end of batch
+const retryCount = new Map(); // word.id → retries so far (max 4)
+let failedWords = [];    // words that exhausted all retries — shown in summary
+
+// ─── Helpers ────────────────────────────────────────────────────
+function getTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function addDays(dateStr, n) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + n);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function showToast(msg, durationMs=2000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(() => t.classList.remove('show'), durationMs);
+}
+
+// ─── Persistence ────────────────────────────────────────────────
+function saveWords() { localStorage.setItem('sv_words', JSON.stringify(words)); }
+function saveProgress() { localStorage.setItem('sv_progress', JSON.stringify(dailyProgress)); }
+function saveSettings() { localStorage.setItem('sv_settings', JSON.stringify(settings)); }
+
+function loadAll() {
+  try {
+    const w = localStorage.getItem('sv_words');
+    if (w) words = JSON.parse(w);
+    const p = localStorage.getItem('sv_progress');
+    if (p) dailyProgress = JSON.parse(p);
+    else dailyProgress = { date: getTodayStr(), reviewedIds: [], newLearnedIds: [] };
+    const s = localStorage.getItem('sv_settings');
+    if (s) settings = Object.assign(settings, JSON.parse(s));
+  } catch(e) { console.warn('Load error, resetting', e); }
+}
+
+function resetDailyIfNew() {
+  const today = getTodayStr();
+  if (dailyProgress.date !== today) {
+    dailyProgress = { date: today, reviewedIds: [], newLearnedIds: [] };
+    saveProgress();
+  }
+}
+
+// ─── Word Management ────────────────────────────────────────────
+function addWord(word, meaning) {
+  // Skip duplicates (case-insensitive match on word)
+  const exists = words.some(w => w.word.toLowerCase() === word.toLowerCase());
+  if (exists) return false;
+  words.push({
+    id: uid(),
+    word: word.trim(),
+    meaning: meaning.trim(),
+    stage: 0,
+    nextReview: null,
+    lastReviewed: null,
+    reviewCount: 0,
+    correctCount: 0,
+  });
+  return true;
+}
+
+function initPresetWords() {
+  if (words.length === 0) {
+    for (const pw of PRESET_WORDS) {
+      addWord(pw.word, pw.meaning);
+    }
+    saveWords();
+  }
+}
+
+// ─── Import ─────────────────────────────────────────────────────
+function parseImportText(text) {
+  text = text.trim();
+  if (!text) return [];
+  // Try JSON array first
+  if (text.startsWith('[')) {
+    try {
+      const arr = JSON.parse(text);
+      return arr.filter(it => it.word && it.meaning).map(it => ({word:it.word, meaning:it.meaning}));
+    } catch(e) { /* fall through */ }
+  }
+  // Line-by-line: split by first occurrence of space/comma/tab or Chinese punctuation
+  const lines = text.split(/[\n\r]+/).filter(l => l.trim());
+  const result = [];
+  for (const line of lines) {
+    // Try to split: "word meaning" or "word, meaning" or "word\tmeaning"
+    const m = line.match(/^(.+?)[\s,，\t]+(.+)$/);
+    if (m) {
+      result.push({ word: m[1].trim(), meaning: m[2].trim() });
+    }
+  }
+  return result;
+}
+
+function doImport(text) {
+  const parsed = parseImportText(text);
+  if (parsed.length === 0) return 0;
+  let added = 0;
+  for (const item of parsed) {
+    if (addWord(item.word, item.meaning)) added++;
+  }
+  if (added > 0) saveWords();
+  return added;
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(words, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'vocab-backup-' + getTodayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── SRS Scheduling ─────────────────────────────────────────────
+function getDueWords() {
+  const today = getTodayStr();
+  return words.filter(w =>
+    w.stage > 0 && w.stage < 7 &&
+    w.nextReview && w.nextReview <= today &&
+    !dailyProgress.reviewedIds.includes(w.id)
+  );
+}
+
+function getNewWords() {
+  return words.filter(w => w.stage === 0);
+}
+
+function pickReviewBatch(quotaOverride) {
+  const quota = quotaOverride || settings.dailyQuota;
+  const due = getDueWords();
+  // Sort: sooner nextReview first, then lower stage first
+  due.sort((a,b) => {
+    if (a.nextReview !== b.nextReview) return a.nextReview < b.nextReview ? -1 : 1;
+    return a.stage - b.stage;
+  });
+  const batch = due.slice(0, quota);
+  if (batch.length < quota) {
+    const newWords = getNewWords();
+    // Shuffle new words for variety
+    const shuffled = newWords.sort(() => Math.random() - 0.5);
+    const needed = quota - batch.length;
+    batch.push(...shuffled.slice(0, needed));
+  }
+  return batch;
+}
+
+// ─── Local Judgment ─────────────────────────────────────────────
+function normalizeText(s) {
+  return s.toLowerCase()
+    .replace(/[，,。.；;：:！!？?、/\\()（）【】\[\]「」"']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function splitMeanings(meaning) {
+  return normalizeText(meaning)
+    .split(/[；;,，、/\s]+/)
+    .filter(m => m.length > 0);
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length:m+1}, (_,i) => [i]);
+  for (let j=0;j<=n;j++) dp[0][j]=j;
+  for (let i=1;i<=m;i++) {
+    for (let j=1;j<=n;j++) {
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function similarity(a, b) {
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return 1 - levenshtein(a, b) / maxLen;
+}
+
+function localJudge(userInput, standardMeaning) {
+  const input = normalizeText(userInput);
+  if (!input) return { correct: false, reason: '未输入翻译' };
+
+  const meaningParts = splitMeanings(standardMeaning);
+  if (meaningParts.length === 0) return { correct: false, reason: '无标准释义' };
+
+  // 1. Exact match (after normalization)
+  for (const part of meaningParts) {
+    if (input === part) return { correct: true, reason: '精确匹配' };
+  }
+
+  // 2. Contains match (user input contains a meaning part, or vice versa)
+  for (const part of meaningParts) {
+    if (input.includes(part) || part.includes(input)) {
+      if (part.length >= 2) return { correct: true, reason: '包含匹配' };
+    }
+  }
+
+  // 3. Levenshtein similarity against each part
+  let bestSim = 0, bestPart = '';
+  for (const part of meaningParts) {
+    const sim = similarity(input, part);
+    if (sim > bestSim) { bestSim = sim; bestPart = part; }
+  }
+
+  if (bestSim >= 0.7) return { correct: true, reason: `相似度匹配 (${Math.round(bestSim*100)}%)` };
+  if (bestSim >= 0.5) return { correct: false, reason: `部分正确，标准答案见下方` };
+  return { correct: false, reason: '不正确' };
+}
+
+// ─── AI Judgment ────────────────────────────────────────────────
+async function aiJudge(word, userInput) {
+  const prompt = `你是一个语言学习判断助手。请判断用户对英文单词/词组的中文翻译是否正确。
+单词："${word.word}"
+标准释义："${word.meaning}"
+用户翻译："${userInput}"
+
+标准释义可能包含多个同义项，用分号、逗号或顿号分隔。用户翻译只要匹配其中任意一个含义即可判定为正确。
+请返回纯JSON（不要markdown包裹）：{"correct":true或false,"reason":"简短中文理由，不超过20字"}`;
+
+  const resp = await fetch(settings.aiApiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + settings.aiApiKey,
+    },
+    body: JSON.stringify({
+      model: settings.aiModel,
+      messages: [
+        { role: 'system', content: '你是严格但公正的语言学习判断助手。只返回JSON。' },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.1,
+      max_tokens: 150,
+    }),
+  });
+
+  if (!resp.ok) throw new Error('API error: ' + resp.status);
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content || '';
+  // Try to extract JSON from the response
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    const result = JSON.parse(jsonMatch[0]);
+    return { correct: !!result.correct, reason: result.reason || '' };
+  }
+  throw new Error('AI response parse error');
+}
+
+// ─── Judgment Dispatcher ────────────────────────────────────────
+async function judgeAnswer(word, userInput) {
+  if (settings.judgeMode === 'ai' && settings.aiApiKey) {
+    try {
+      return await aiJudge(word, userInput);
+    } catch(e) {
+      console.warn('AI judge failed, falling back to local:', e.message);
+      // Fall through to local
+    }
+  }
+  return localJudge(userInput, word.meaning);
+}
+
+// ─── SRS Update ─────────────────────────────────────────────────
+function updateWordStage(word, correct) {
+  const today = getTodayStr();
+  word.lastReviewed = today;
+  word.reviewCount++;
+
+  if (correct) {
+    word.correctCount++;
+    if (word.stage < 7) {
+      word.stage++;
+      if (word.stage >= 7) {
+        word.nextReview = null; // mastered, no auto-schedule
+      } else {
+        word.nextReview = addDays(today, SRS_INTERVALS[word.stage]);
+      }
+    }
+  } else {
+    word.stage = 1;
+    word.nextReview = addDays(today, 1); // tomorrow
+  }
+
+  dailyProgress.reviewedIds.push(word.id);
+  if (word.reviewCount === 1 && correct) {
+    dailyProgress.newLearnedIds.push(word.id);
+  }
+  saveWords();
+  saveProgress();
+}
+
+// ─── Finalize Word (after retries or first-try correct) ─────────
+function finalizeWord(word, finalCorrect, tries) {
+  const today = getTodayStr();
+  word.lastReviewed = today;
+  word.reviewCount++;
+
+  if (finalCorrect) {
+    word.correctCount++;
+    if (tries === 0) {
+      // First try correct — normal SRS progression
+      if (word.stage < 7) {
+        word.stage++;
+        if (word.stage >= 7) {
+          word.nextReview = null;
+        } else {
+          word.nextReview = addDays(today, SRS_INTERVALS[word.stage]);
+        }
+      }
+    } else if (tries === 1) {
+      word.nextReview = addDays(today, 5);
+    } else if (tries === 2) {
+      word.nextReview = addDays(today, 4);
+    } else {
+      // tries >= 3 — squeezed through, short interval
+      word.nextReview = addDays(today, 3);
+    }
+  } else {
+    // Exhausted retries, still wrong
+    word.stage = 1;
+    word.nextReview = addDays(today, 1);
+  }
+
+  dailyProgress.reviewedIds.push(word.id);
+  if (word.reviewCount === 1 && finalCorrect) {
+    dailyProgress.newLearnedIds.push(word.id);
+  }
+  saveWords();
+  saveProgress();
+}
+
+// ─── Render: Learn View ─────────────────────────────────────────
+function renderLearnView() {
+  resetDailyIfNew();
+  const learnCard = document.getElementById('learn-card');
+  const completedCard = document.getElementById('completed-card');
+  const emptyCard = document.getElementById('empty-card');
+
+  if (currentBatch.length === 0 && batchIndex === 0) {
+    currentBatch = pickReviewBatch();
+    batchIndex = 0;
+    retryQueue = [];
+    retryCount.clear();
+    failedWords = [];
+  }
+
+  if (currentBatch.length === 0) {
+    learnCard.style.display = 'none';
+    completedCard.style.display = 'none';
+    emptyCard.style.display = '';
+    return;
+  }
+
+  if (batchIndex >= currentBatch.length) {
+    // Main batch done — check if any words need retrying
+    if (retryQueue.length > 0) {
+      currentBatch = [...retryQueue];
+      batchIndex = 0;
+      retryQueue = [];
+      // fall through to render the first retry word
+    } else {
+      // Truly done
+      learnCard.style.display = 'none';
+      completedCard.style.display = '';
+      emptyCard.style.display = 'none';
+      document.getElementById('completed-msg').textContent =
+        `今日已学习 ${dailyProgress.reviewedIds.length} 个词汇`;
+
+      // Show failed words summary
+      const failedDiv = document.getElementById('failed-summary');
+      if (failedWords.length > 0) {
+        const rows = failedWords.map(f =>
+          `<tr><td>${f.word}</td><td>${f.meaning}</td></tr>`
+        ).join('');
+        failedDiv.style.display = '';
+        failedDiv.innerHTML = `
+          <h3 style="color:var(--wrong);margin-bottom:8px">😤 这些词明天继续加油——</h3>
+          <table class="failed-table">
+            <thead><tr><th>单词</th><th>释义</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      } else {
+        failedDiv.style.display = 'none';
+      }
+      return;
+    }
+  }
+
+  emptyCard.style.display = 'none';
+  completedCard.style.display = 'none';
+  learnCard.style.display = '';
+
+  const word = currentBatch[batchIndex];
+  const wordObj = words.find(w => w.id === word.id);
+  document.getElementById('learn-word').textContent = word.word;
+  const retries = retryCount.get(wordObj.id) || 0;
+  const isRetry = retries > 0;
+  document.getElementById('learn-hint').textContent =
+    isRetry ? `🔁 重新测试 (${retries}/4)` :
+    wordObj && wordObj.stage > 0 ? `阶段 ${wordObj.stage} · 复习` : '新词';
+
+  const total = currentBatch.length;
+  const done = batchIndex;
+  const pct = Math.round((done / total) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${done} / ${total}`;
+
+  document.getElementById('answer-input').value = '';
+  document.getElementById('answer-input').focus();
+  document.getElementById('feedback').classList.remove('show', 'correct', 'wrong');
+}
+
+async function handleSubmit() {
+  const input = document.getElementById('answer-input').value.trim();
+  if (!input) return;
+
+  const word = currentBatch[batchIndex];
+  const wordObj = words.find(w => w.id === word.id);
+  const fb = document.getElementById('feedback');
+
+  const result = await judgeAnswer(wordObj, input);
+  const prevTries = retryCount.get(wordObj.id) || 0;
+
+  if (result.correct) {
+    finalizeWord(wordObj, true, prevTries);
+  } else if (prevTries < 4) {
+    // Schedule retry — don't finalize yet
+    retryQueue.push(word);
+    retryCount.set(wordObj.id, prevTries + 1);
+    saveProgress();
+  } else {
+    // Exhausted all 4 retries, still wrong
+    finalizeWord(wordObj, false, prevTries);
+    failedWords.push({ word: wordObj.word, meaning: wordObj.meaning });
+  }
+
+  fb.classList.add('show');
+  fb.classList.add(result.correct ? 'correct' : 'wrong');
+  fb.classList.remove(result.correct ? 'wrong' : 'correct');
+
+  const tease = (!result.correct && prevTries >= 4)
+    ? '<div class="tease">错了这么多次，没认真记啊 🤨</div>' : '';
+
+  fb.innerHTML = result.correct
+    ? `✅ 正确！${result.reason}<div class="answer">${word.word} — ${word.meaning}</div>`
+    : `❌ ${result.reason}<div class="answer">正确答案：${word.word} — ${word.meaning}</div>${tease}`;
+
+  // Move to next after a short delay
+  setTimeout(() => {
+    batchIndex++;
+    renderLearnView();
+    renderStatsView();
+  }, result.correct ? 800 : 1800);
+}
+
+function handleSkip() {
+  const word = currentBatch[batchIndex];
+  const wordObj = words.find(w => w.id === word.id);
+
+  const fb = document.getElementById('feedback');
+  fb.classList.add('show', 'wrong');
+
+  const prevTries = retryCount.get(wordObj.id) || 0;
+
+  if (prevTries >= 4) {
+    // Exhausted retries — finalize as wrong
+    finalizeWord(wordObj, false, prevTries);
+    failedWords.push({ word: wordObj.word, meaning: wordObj.meaning });
+  } else {
+    // Schedule retry — don't finalize yet
+    retryQueue.push(word);
+    retryCount.set(wordObj.id, prevTries + 1);
+    saveProgress();
+  }
+
+  const tease = prevTries >= 4 ? '<div class="tease">错了这么多次，没认真记啊 🤨</div>' : '';
+
+  fb.innerHTML = `📝 已跳过<div class="answer">正确答案：${word.word} — ${word.meaning}</div>${tease}`;
+
+  // Disable buttons during feedback display
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('skip-btn').disabled = true;
+
+  setTimeout(() => {
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('skip-btn').disabled = false;
+    batchIndex++;
+    renderLearnView();
+    renderStatsView();
+  }, 1500);
+}
+
+function handleExtraStudy() {
+  const extra = pickReviewBatch(settings.dailyQuota);
+  if (extra.length > 0) {
+    currentBatch = extra;
+    batchIndex = 0;
+    retryQueue = [];
+    retryCount.clear();
+    failedWords = [];
+    dailyProgress.reviewedIds = [];
+    dailyProgress.newLearnedIds = [];
+    saveProgress();
+    renderLearnView();
+  } else {
+    showToast('没有更多可学习的词汇');
+  }
+}
+
+// ─── Render: Library View ───────────────────────────────────────
+function renderLibraryView(filterText) {
+  const container = document.getElementById('word-list');
+  const search = (filterText || '').toLowerCase();
+  let filtered = words;
+  if (search) {
+    filtered = words.filter(w =>
+      w.word.toLowerCase().includes(search) || w.meaning.includes(search)
+    );
+  }
+  document.getElementById('lib-count').textContent = `共 ${filtered.length} 个`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">没有匹配的词汇</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(w => {
+    const stageNames = ['新词','初学','2天','4天','7天','15天','30天','已掌握'];
+    return `
+    <div class="word-item">
+      <div class="wi-left">
+        <span class="stage-dot s${w.stage}"></span>
+        <span>
+          <span class="wi-word">${escHtml(w.word)}</span>
+          <span class="wi-meaning"> — ${escHtml(w.meaning)}</span>
+        </span>
+      </div>
+      <span style="font-size:12px;color:var(--muted);white-space:nowrap">${stageNames[w.stage]||''}</span>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─── Render: Stats View ─────────────────────────────────────────
+function renderStatsView() {
+  const total = words.length;
+  const mastered = words.filter(w => w.stage >= 7).length;
+  const todayDone = dailyProgress.reviewedIds.length;
+  const dueCount = getDueWords().length;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-mastered').textContent = mastered;
+  document.getElementById('stat-today').textContent = todayDone;
+  document.getElementById('stat-due').textContent = dueCount;
+
+  // Stage distribution bars
+  const stages = [0,1,2,3,4,5,6,7];
+  const stageNames = ['新词','1天','2天','4天','7天','15天','30天','掌握'];
+  const colors = [
+    'var(--stage-0)','var(--stage-1)','var(--stage-2)','var(--stage-3)',
+    'var(--stage-4)','var(--stage-5)','var(--stage-6)','var(--stage-7)'
+  ];
+  const maxCount = Math.max(1, ...stages.map(s => words.filter(w => w.stage === s).length));
+  const bars = document.getElementById('stage-bars');
+  bars.innerHTML = stages.map((s,i) => {
+    const count = words.filter(w => w.stage === s).length;
+    const pct = Math.round((count / maxCount) * 100);
+    return `<div class="stage-bar-row">
+      <span class="bar-label">${stageNames[i]}</span>
+      <span class="bar-track"><span class="bar-fill" style="width:${pct}%;background:${colors[i]}"></span></span>
+      <span class="bar-count">${count}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── Render: Settings View ──────────────────────────────────────
+function renderSettingsView() {
+  document.getElementById('set-quota').value = settings.dailyQuota;
+  document.getElementById('set-mode').value = settings.judgeMode;
+  document.getElementById('set-api-url').value = settings.aiApiUrl || '';
+  document.getElementById('set-api-key').value = settings.aiApiKey || '';
+  document.getElementById('set-api-model').value = settings.aiModel || 'deepseek-chat';
+  toggleAiConfig();
+}
+
+function toggleAiConfig() {
+  const mode = document.getElementById('set-mode').value;
+  document.getElementById('ai-config-card').style.display = mode === 'ai' ? '' : 'none';
+}
+
+// ─── Navigation ─────────────────────────────────────────────────
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+
+  const viewMap = { learn:'learn-view', library:'library-view', stats:'stats-view', settings:'settings-view' };
+  const viewEl = document.getElementById(viewMap[name]);
+  if (viewEl) viewEl.classList.add('active');
+
+  const btn = document.querySelector(`nav button[data-view="${name}"]`);
+  if (btn) btn.classList.add('active');
+
+  if (name === 'learn') renderLearnView();
+  else if (name === 'library') renderLibraryView();
+  else if (name === 'stats') renderStatsView();
+  else if (name === 'settings') renderSettingsView();
+}
+
+// ─── Event Wiring ───────────────────────────────────────────────
+function initEvents() {
+  // Nav buttons
+  document.querySelectorAll('nav button').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  // Learn view
+  document.getElementById('submit-btn').addEventListener('click', handleSubmit);
+  document.getElementById('answer-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleSubmit();
+  });
+  document.getElementById('skip-btn').addEventListener('click', handleSkip);
+  document.getElementById('extra-study-btn').addEventListener('click', handleExtraStudy);
+
+  // Library view
+  document.getElementById('lib-search').addEventListener('input', e => renderLibraryView(e.target.value));
+  document.getElementById('import-btn').addEventListener('click', () => {
+    document.getElementById('import-modal').classList.add('show');
+    document.getElementById('import-textarea').value = '';
+    document.getElementById('import-msg').textContent = '';
+  });
+  document.getElementById('import-cancel-btn').addEventListener('click', () => {
+    document.getElementById('import-modal').classList.remove('show');
+  });
+  document.getElementById('import-confirm-btn').addEventListener('click', () => {
+    const text = document.getElementById('import-textarea').value;
+    const added = doImport(text);
+    document.getElementById('import-msg').textContent = `成功导入 ${added} 个新词汇`;
+    if (added > 0) {
+      document.getElementById('import-textarea').value = '';
+      renderLibraryView(document.getElementById('lib-search').value);
+      renderStatsView();
+    }
+  });
+  document.getElementById('import-file-btn').addEventListener('click', () => {
+    document.getElementById('import-file').click();
+  });
+  document.getElementById('import-file').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      document.getElementById('import-textarea').value = reader.result;
+      document.getElementById('import-msg').textContent = `已加载文件: ${file.name}`;
+    };
+    reader.readAsText(file);
+  });
+  document.getElementById('export-btn').addEventListener('click', () => {
+    if (words.length === 0) { showToast('词库为空，无法导出'); return; }
+    exportJSON();
+    showToast('导出成功！');
+  });
+
+  // Settings view
+  document.getElementById('set-mode').addEventListener('change', toggleAiConfig);
+  document.getElementById('set-quota').addEventListener('change', e => {
+    settings.dailyQuota = Math.max(5, Math.min(100, parseInt(e.target.value)||20));
+    saveSettings();
+  });
+  document.getElementById('set-mode').addEventListener('change', e => {
+    settings.judgeMode = e.target.value;
+    saveSettings();
+  });
+  document.getElementById('set-api-url').addEventListener('change', e => {
+    settings.aiApiUrl = e.target.value;
+    saveSettings();
+  });
+  document.getElementById('set-api-key').addEventListener('change', e => {
+    settings.aiApiKey = e.target.value;
+    saveSettings();
+  });
+  document.getElementById('set-api-model').addEventListener('change', e => {
+    settings.aiModel = e.target.value;
+    saveSettings();
+  });
+  document.getElementById('test-api-btn').addEventListener('click', async () => {
+    const resultEl = document.getElementById('test-api-result');
+    resultEl.textContent = '测试中…';
+    try {
+      const resp = await fetch(settings.aiApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + settings.aiApiKey,
+        },
+        body: JSON.stringify({
+          model: settings.aiModel,
+          messages: [{ role: 'user', content: '回复"OK"' }],
+          max_tokens: 10,
+        }),
+      });
+      if (resp.ok) {
+        resultEl.textContent = '✅ 连接成功';
+        resultEl.style.color = 'var(--correct)';
+      } else {
+        resultEl.textContent = '❌ HTTP ' + resp.status;
+        resultEl.style.color = 'var(--wrong)';
+      }
+    } catch(e) {
+      resultEl.textContent = '❌ 连接失败: ' + e.message;
+      resultEl.style.color = 'var(--wrong)';
+    }
+  });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (confirm('确定要删除所有词汇和学习记录吗？此操作不可恢复！')) {
+      words = [];
+      dailyProgress = { date: getTodayStr(), reviewedIds: [], newLearnedIds: [] };
+      currentBatch = [];
+      batchIndex = 0;
+      saveWords();
+      saveProgress();
+      showToast('数据已重置');
+      switchView('learn');
+    }
+  });
+
+  // Modal close on overlay click
+  document.getElementById('import-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) {
+      document.getElementById('import-modal').classList.remove('show');
+    }
+  });
+}
+
+// ─── Bootstrap ──────────────────────────────────────────────────
+function init() {
+  loadAll();
+  initPresetWords();
+  resetDailyIfNew();
+  currentBatch = pickReviewBatch();
+  batchIndex = 0;
+  renderLearnView();
+  initEvents();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
