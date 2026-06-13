@@ -98,6 +98,8 @@ nav button .icon{display:block;font-size:18px;margin-bottom:2px;}
 .word-item .wi-left{display:flex;align-items:center;gap:10px}
 .word-item .wi-word{font-weight:600;font-size:15px}
 .word-item .wi-meaning{font-size:13px;color:var(--muted)}
+.btn-del-word{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;opacity:.5;transition:all .15s}
+.btn-del-word:hover{opacity:1;color:var(--wrong);background:#f8d7da}
 .stage-dot{
   width:10px;height:10px;border-radius:50%;flex-shrink:0;
 }
@@ -925,12 +927,29 @@ function renderLibraryView(filterText) {
           <span class="wi-meaning"> — ${escHtml(w.meaning)}</span>
         </span>
       </div>
-      <span style="font-size:12px;color:var(--muted);white-space:nowrap">${stageNames[w.stage]||''}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:var(--muted);white-space:nowrap">${stageNames[w.stage]||''}</span>
+        <button class="btn-del-word" data-id="${w.id}" title="删除">✕</button>
+      </div>
     </div>`;
   }).join('');
 }
 
 function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function deleteWord(id) {
+  const w = words.find(w => w.id === id);
+  if (!w) return;
+  if (!confirm(`确定删除「${w.word} — ${w.meaning}」吗？`)) return;
+  words = words.filter(w => w.id !== id);
+  dailyProgress.reviewedIds = dailyProgress.reviewedIds.filter(rid => rid !== id);
+  dailyProgress.newLearnedIds = dailyProgress.newLearnedIds.filter(rid => rid !== id);
+  saveWords();
+  saveProgress();
+  renderLibraryView(document.getElementById('lib-search').value);
+  renderStatsView();
+  showToast('已删除');
+}
 
 // ─── Render: Stats View ─────────────────────────────────────────
 function renderStatsView() {
@@ -1014,6 +1033,10 @@ function initEvents() {
 
   // Library view
   document.getElementById('lib-search').addEventListener('input', e => renderLibraryView(e.target.value));
+  document.getElementById('word-list').addEventListener('click', e => {
+    const btn = e.target.closest('.btn-del-word');
+    if (btn) deleteWord(btn.dataset.id);
+  });
   document.getElementById('import-btn').addEventListener('click', () => {
     document.getElementById('import-modal').classList.add('show');
     document.getElementById('import-textarea').value = '';
