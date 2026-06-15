@@ -367,7 +367,7 @@ const PRESET_WORDS = [
 ];
 
 // ─── SRS Interval Table ─────────────────────────────────────────
-const SRS_INTERVALS = [0, 1, 2, 4, 7, 15, 30]; // index 1..6
+const SRS_INTERVALS = [0, 3, 7, 14, 30, 60, 90]; // index 1..6
 
 // ─── Global State ───────────────────────────────────────────────
 let words = [];
@@ -670,7 +670,7 @@ function updateWordStage(word, correct) {
     }
   } else {
     word.stage = 1;
-    word.nextReview = addDays(today, 1); // tomorrow
+    word.nextReview = addDays(today, 3); // 3 days later
   }
 
   dailyProgress.reviewedIds.push(word.id);
@@ -700,9 +700,9 @@ function finalizeWord(word, finalCorrect, tries) {
         }
       }
     } else if (tries === 1) {
-      word.nextReview = addDays(today, 5);
+      word.nextReview = addDays(today, 7);
     } else if (tries === 2) {
-      word.nextReview = addDays(today, 4);
+      word.nextReview = addDays(today, 5);
     } else {
       // tries >= 3 — squeezed through, short interval
       word.nextReview = addDays(today, 3);
@@ -710,7 +710,7 @@ function finalizeWord(word, finalCorrect, tries) {
   } else {
     // Exhausted retries, still wrong
     word.stage = 1;
-    word.nextReview = addDays(today, 1);
+    word.nextReview = addDays(today, 3);
   }
 
   dailyProgress.reviewedIds.push(word.id);
@@ -917,7 +917,7 @@ function renderLibraryView(filterText) {
   }
 
   container.innerHTML = filtered.map(w => {
-    const stageNames = ['新词','初学','2天','4天','7天','15天','30天','已掌握'];
+    const stageNames = ['新词','3天','7天','14天','30天','60天','90天','已掌握'];
     return `
     <div class="word-item">
       <div class="wi-left">
@@ -965,7 +965,7 @@ function renderStatsView() {
 
   // Stage distribution bars
   const stages = [0,1,2,3,4,5,6,7];
-  const stageNames = ['新词','1天','2天','4天','7天','15天','30天','掌握'];
+  const stageNames = ['新词','3天','7天','14天','30天','60天','90天','掌握'];
   const colors = [
     'var(--stage-0)','var(--stage-1)','var(--stage-2)','var(--stage-3)',
     'var(--stage-4)','var(--stage-5)','var(--stage-6)','var(--stage-7)'
