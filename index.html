@@ -82,6 +82,16 @@ nav button .icon{display:block;font-size:18px;margin-bottom:2px;}
 .completed-card .icon{font-size:48px}
 .completed-card h2{margin:12px 0 4px}
 .completed-card p{color:var(--muted);margin-bottom:8px}
+/* KO按钮 */
+.btn-ko{
+  display:inline-block;margin-top:10px;padding:6px 18px;
+  border:2px solid #f0a500;border-radius:20px;
+  background:linear-gradient(135deg,#fff8e1,#fff3cd);
+  color:#b8860b;font-size:14px;font-weight:700;cursor:pointer;
+  transition:all .2s;letter-spacing:1px;
+}
+.btn-ko:hover{background:#f0a500;color:#fff;transform:scale(1.05);box-shadow:0 2px 8px rgba(240,165,0,.3)}
+.btn-ko:active{transform:scale(.95)}
 
 /* ===== Library View ===== */
 .search-bar input{
@@ -190,6 +200,7 @@ nav button .icon{display:block;font-size:18px;margin-bottom:2px;}
       <div class="word-display">
         <div class="word" id="learn-word"></div>
         <div class="hint" id="learn-hint"></div>
+        <button class="btn-ko" id="ko-btn" title="记得很熟，30天内不再出现">🥊 KO</button>
       </div>
       <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
       <div class="progress-text" id="progress-text"></div>
@@ -882,6 +893,45 @@ function handleSkip() {
   }, 1500);
 }
 
+function handleKO() {
+  const word = currentBatch[batchIndex];
+  const wordObj = words.find(w => w.id === word.id);
+  if (!wordObj) return;
+
+  const today = getTodayStr();
+
+  // 设为接近掌握状态，30天后才再次出现
+  wordObj.stage = 6;
+  wordObj.nextReview = addDays(today, 30);
+  wordObj.lastReviewed = today;
+  wordObj.reviewCount++;
+  wordObj.correctCount++;
+  wordObj.koCount = (wordObj.koCount || 0) + 1;
+
+  dailyProgress.reviewedIds.push(wordObj.id);
+  saveWords();
+  saveProgress();
+
+  // 显示反馈
+  const fb = document.getElementById('feedback');
+  fb.classList.add('show', 'correct');
+  fb.innerHTML = `🥊 <strong>KO！</strong> 已标记为熟记 — 30天内不再出现<div class="answer">${wordObj.word} — ${wordObj.meaning}</div>`;
+
+  // 禁用按钮
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('skip-btn').disabled = true;
+  document.getElementById('ko-btn').disabled = true;
+
+  setTimeout(() => {
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('skip-btn').disabled = false;
+    document.getElementById('ko-btn').disabled = false;
+    batchIndex++;
+    renderLearnView();
+    renderStatsView();
+  }, 1000);
+}
+
 function handleExtraStudy() {
   const extra = pickReviewBatch(settings.dailyQuota);
   if (extra.length > 0) {
@@ -923,7 +973,7 @@ function renderLibraryView(filterText) {
       <div class="wi-left">
         <span class="stage-dot s${w.stage}"></span>
         <span>
-          <span class="wi-word">${escHtml(w.word)}</span>
+          <span class="wi-word">${escHtml(w.word)}</span>${w.koCount ? ' <span style="font-size:12px" title=\"KO过'+w.koCount+'次\">🥊</span>' : ''}
           <span class="wi-meaning"> — ${escHtml(w.meaning)}</span>
         </span>
       </div>
@@ -1029,6 +1079,7 @@ function initEvents() {
     if (e.key === 'Enter') handleSubmit();
   });
   document.getElementById('skip-btn').addEventListener('click', handleSkip);
+  document.getElementById('ko-btn').addEventListener('click', handleKO);
   document.getElementById('extra-study-btn').addEventListener('click', handleExtraStudy);
 
   // Library view
